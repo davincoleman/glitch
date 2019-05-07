@@ -1,0 +1,351 @@
+---
+swagger: "2.0"
+info:
+  description: "[Tandem's](https://developer.tandem.co.uk) API for integration between\
+    \ Tandem and Deposit Solutions."
+  version: "1.0.0"
+  title: "Deposit Solutions Identity Check API"
+  termsOfService: "http://developer.tandem.co.uk/terms/"
+  contact:
+    email: "depositsolutions@tandem.co.uk"
+  license:
+    name: "License"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "api.sandbox.tandembank.io"
+basePath: "/deposits"
+tags:
+- name: "identity-check"
+  description: "Manage identity checking"
+- name: "health"
+  description: "Provide health check endpoint"
+- name: "docs"
+  description: "Provide documentation"
+schemes:
+- "https"
+paths:
+  /health:
+    get:
+      tags:
+      - "health"
+      summary: "Health check for Deposit Solutions service"
+      description: ""
+      operationId: "getHealth"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Health good"
+      x-swagger-router-controller: "Health"
+  /docs-1:
+    get:
+      tags:
+      - "docs"
+      summary: "Swagger docs for Deposit Solutions service"
+      description: ""
+      operationId: "getDocs"
+      responses:
+        200:
+          description: "Return Swagger docs"
+      x-swagger-router-controller: "Docs"
+  /identity-check:
+    post:
+      tags:
+      - "identity-check"
+      summary: "Start a new IdentityCheck"
+      description: "Deposit Solution will initiate the check. Information about the\
+        \ customer is provided by Deposit Solutions when the call is made. Tandem\
+        \ will record this information and return a check ID. Deposit Solution can\
+        \ monitor the progress of the check using the URL in the Location header.\
+        \ Tandem will use the callback URL to inform Deposit Solution that the check\
+        \ is complete.\n"
+      operationId: "createIdentityCheck"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Customer reference, profile and callbackUri"
+        required: true
+        schema:
+          $ref: "#/definitions/IdentityCheckRequest"
+      responses:
+        201:
+          description: "IdentityCheck successfully started"
+          headers:
+            Location:
+              type: "string"
+              format: "uri"
+              description: "URL for monitoring progression"
+          schema:
+            $ref: "#/definitions/IdentityCheckResponse"
+        400:
+          description: "Invalid request format"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        500:
+          description: "Unknown internal error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      security:
+      - api_key: []
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:{{\
+          \ lambdaname }}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: "when_no_match"
+        httpMethod: "POST"
+        contentHandling: "CONVERT_TO_TEXT"
+        type: "aws_proxy"
+      x-swagger-router-controller: "IdentityCheck"
+  /identity-check/{identityCheckId}:
+    get:
+      tags:
+      - "identity-check"
+      summary: "Find Identity Check by Id"
+      description: ""
+      operationId: "getIdentityCheckById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "identityCheckId"
+        in: "path"
+        description: "IdentityCheck Id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "IdentityCheck found"
+          schema:
+            $ref: "#/definitions/IdentityCheckResponse"
+        400:
+          description: "Invalid IdentityCheck Id supplied"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: "IdentityCheck not found"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        500:
+          description: "Unknown error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      security:
+      - api_key: []
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:{{\
+          \ lambdaname }}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: "when_no_match"
+        httpMethod: "POST"
+        contentHandling: "CONVERT_TO_TEXT"
+        type: "aws_proxy"
+      x-swagger-router-controller: "IdentityCheck"
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "x-api-key"
+    in: "header"
+definitions:
+  IdentityCheckRequest:
+    type: "object"
+    required:
+    - "customerReference"
+    - "profile"
+    properties:
+      profile:
+        description: "Details about the customer"
+        $ref: "#/definitions/Profile"
+      customerReference:
+        type: "string"
+        format: "uuid"
+        description: "Deposit Solutions customer reference"
+      callbackUri:
+        type: "string"
+        format: "uri"
+        description: "URL webhook which is reachable from Tandem to call once a check\
+          \ is complete"
+    example:
+      profile:
+        firstName: "firstName"
+        lastName: "lastName"
+        addresses:
+        - city: "city"
+          moveInDate: "2000-01-23"
+          street: "street"
+          postcode: "postcode"
+          houseOrFlatNumber: "houseOrFlatNumber"
+          addressLine2: "addressLine2"
+        - city: "city"
+          moveInDate: "2000-01-23"
+          street: "street"
+          postcode: "postcode"
+          houseOrFlatNumber: "houseOrFlatNumber"
+          addressLine2: "addressLine2"
+        nationality: "nationality"
+        countryOfBirth: "countryOfBirth"
+        dateOfBirth: "2000-01-23"
+      customerReference: "046b6c7f-0b8a-43b9-b35d-6489e6daee91"
+      callbackUri: "http://example.com/aeiou"
+  Profile:
+    type: "object"
+    required:
+    - "dateOfBirth"
+    - "firstName"
+    - "lastName"
+    properties:
+      firstName:
+        type: "string"
+      lastName:
+        type: "string"
+      dateOfBirth:
+        type: "string"
+        format: "date"
+      countryOfBirth:
+        type: "string"
+        description: "ISO 3166-1 country codes"
+      nationality:
+        type: "string"
+        description: "ISO 3166-1 country codes"
+      addresses:
+        type: "array"
+        items:
+          $ref: "#/definitions/Address"
+    example:
+      firstName: "firstName"
+      lastName: "lastName"
+      addresses:
+      - city: "city"
+        moveInDate: "2000-01-23"
+        street: "street"
+        postcode: "postcode"
+        houseOrFlatNumber: "houseOrFlatNumber"
+        addressLine2: "addressLine2"
+      - city: "city"
+        moveInDate: "2000-01-23"
+        street: "street"
+        postcode: "postcode"
+        houseOrFlatNumber: "houseOrFlatNumber"
+        addressLine2: "addressLine2"
+      nationality: "nationality"
+      countryOfBirth: "countryOfBirth"
+      dateOfBirth: "2000-01-23"
+  Address:
+    type: "object"
+    required:
+    - "city"
+    - "houseOrFlatNumber"
+    - "moveInDate"
+    - "postcode"
+    - "street"
+    properties:
+      houseOrFlatNumber:
+        type: "string"
+      street:
+        type: "string"
+      city:
+        type: "string"
+      postcode:
+        type: "string"
+      moveInDate:
+        type: "string"
+        format: "date"
+      addressLine2:
+        type: "string"
+    example:
+      city: "city"
+      moveInDate: "2000-01-23"
+      street: "street"
+      postcode: "postcode"
+      houseOrFlatNumber: "houseOrFlatNumber"
+      addressLine2: "addressLine2"
+  IdentityCheckResponse:
+    type: "object"
+    required:
+    - "createdOn"
+    - "customerReference"
+    - "id"
+    - "status"
+    properties:
+      id:
+        type: "string"
+        format: "uuid"
+      status:
+        type: "string"
+        enum:
+        - "Processing"
+        - "Accepted"
+        - "Declined"
+        - "Error"
+      createdOn:
+        type: "string"
+        format: "date"
+      customerReference:
+        type: "string"
+      duplicatedCustomerReference:
+        type: "string"
+      duplicatedIdentityId:
+        type: "string"
+      identity:
+        $ref: "#/definitions/Identity"
+      decline:
+        $ref: "#/definitions/Decline"
+      error:
+        $ref: "#/definitions/Error"
+    example:
+      duplicatedCustomerReference: "duplicatedCustomerReference"
+      duplicatedIdentityId: "duplicatedIdentityId"
+      identity:
+        id: "id"
+      customerReference: "customerReference"
+      decline:
+        code: "code"
+      id: "046b6c7f-0b8a-43b9-b35d-6489e6daee91"
+      error:
+        code: "code"
+        message: "message"
+      createdOn: "2000-01-23"
+      status: "Processing"
+  Identity:
+    type: "object"
+    required:
+    - "id"
+    properties:
+      id:
+        type: "string"
+    example:
+      id: "id"
+  Decline:
+    type: "object"
+    required:
+    - "code"
+    properties:
+      code:
+        type: "string"
+    example:
+      code: "code"
+  Error:
+    type: "object"
+    required:
+    - "code"
+    properties:
+      code:
+        type: "string"
+      message:
+        type: "string"
+    example:
+      code: "code"
+      message: "message"
+  ErrorResponse:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+      message:
+        type: "string"
+
