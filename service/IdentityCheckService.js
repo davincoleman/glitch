@@ -1,8 +1,10 @@
 'use strict';
 
-const uuid = require('uuid/v1');
+const uuid = require('uuid/v4');
 
 var custChecks = {};
+var custIdChecks = {};
+
 
 /**
  * Start a new IdentityCheck
@@ -11,49 +13,41 @@ var custChecks = {};
  * body IdentityCheckRequest Customer reference, profile and callbackUri
  * returns IdentityCheckResponse
  **/
-exports.createIdentityCheck = function(body) {
+exports.createIdentityCheck = function(body, headers) {
   return new Promise(function(resolve, reject) {
     
-    let now = new Date();
-    const id = body.customerReference;
+    const custId = body.customerReference;
+    const testHeader = headers['x-test'];
     
-    // see if customer check previous
-    const prevCheck = custChecks[id];
-    var createdTime = now.toISOString();
-    var checkId = uuid();
-    if (prevCheck) {
-      createdTime = prevCheck.createdOn;
-      checkId = prevCheck.id;
-    } else {
-      body.createdOn = createdTime;
-      body.id = checkId;
-      custChecks[id] = body;
+    if (testHeader && testHeader.toLowerCase('reset')) {
+      return resolve ({body: {status: 'reset'}, status: 205});
     }
     
-    var response = {
-//  "duplicatedCustomerReference" : "duplicatedCustomerReference",
-//  "duplicatedIdentityId" : "duplicatedIdentityId",
-  // "identity" : {
-  //   "id" : "id"
-  // },
-  "customerReference" : id,
-  // "decline" : {
-  //   "code" : "code"
-  // },
-  "id" : checkId,
-  // "error" : {
-  //   "code" : "code",
-  //   "message" : "message"
-  // },
-  "createdOn" : createdTime,
-  "status" : "Processing"
-    };
+    // see if customer check previous
+    const prevCheck = custIdChecks[custId];
+    if (prevCheck) {
+      const response = custChecks[prevCheck.checkId];
+      if (response) return resolve ({body: response, status: 200});
+    }
     
-    var examples = {};
-    examples['application/json'] = response;
+    var checkId = uuid();
+    body.checkId = checkId;
+    custIdChecks[custId] = body;
+
+    let now = new Date();
+    var createdTime = now.toISOString();
+
+    var response = {
+      "customerReference" : custId,
+      "id" : checkId,
+      "createdOn" : createdTime,
+      "status" : "Processing"
+    };
+    // save the check context
+    custChecks[checkId] = response;
       
-    if (Object.keys(examples).length > 0) {
-      resolve({body: examples[Object.keys(examples)[0]], status: prevCheck ? 200 : 201});
+    if (response) {
+      resolve({body: response, status: prevCheck ? 200 : 201});
     } else {
       resolve();
     }
@@ -68,29 +62,37 @@ exports.createIdentityCheck = function(body) {
  * identityCheckId String IdentityCheck Id
  * returns IdentityCheckResponse
  **/
-exports.getIdentityCheckById = function(identityCheckId) {
+exports.getIdentityCheckById = function(identityCheckId, headers) {
   return new Promise(function(resolve, reject) {
-    var examples = {};
-    examples['application/json'] = {
-  "duplicatedCustomerReference" : "duplicatedCustomerReference",
-  "duplicatedIdentityId" : "duplicatedIdentityId",
-  "identity" : {
-    "id" : "id"
-  },
-  "customerReference" : "customerReference",
-  "decline" : {
-    "code" : "code"
-  },
-  "id" : "identityCheckId",
-  "error" : {
-    "code" : "code",
-    "message" : "message"
-  },
-  "createdOn" : "2000-01-23",
-  "status" : "Processing"
-};
-    if (Object.keys(examples).length > 0) {
-      resolve(examples[Object.keys(examples)[0]]);
+
+    const testHeader = headers['x-test'];
+    // see if customer check previous
+    const check = custChecks[identityCheckId];
+    if (!check) return resolve({body: {error: 'check[' + identityCheckId + '] not found'}, status: 404});
+
+    if (testHeader && check.status == 'Processing') {
+      if (testHeader.toLowerCase() == 'accepted') {
+        check.status = 'Accepted';
+        check.identity = {id: uuid()};
+      }
+      if (testHeader.toLowerCase() == 'declined') {
+        check.status = 'Declined';
+        check.decline = {code: 'TANDEM-01'};
+      }
+      if (testHeader.toLowerCase() == 'errored') {
+        check.status = 'Error';
+        check.error = {code: 'ERR-01', message: 'Tandem Error Message'};
+      }
+      if (testHeader.toLowerCase() == 'duplicated') {
+        const dupCust = custChecks[Object.keys(custChecks)[0]];
+        check.duplicatedCustomerReference = dupCust.customerReference;
+        check.duplicatedIdentityId = dupCust.identity.id;
+        check.status = dupCust.status;
+      }
+    }
+    
+    if (check) {
+      resolve({body: check, status: 200});
     } else {
       resolve();
     }

@@ -1,19 +1,21 @@
-Welcome to Glitch
-=================
+Welcome to Deposit Solution Mocks
+=================================
 
-Click `Show` in the header to see your app live. Updates to your code will instantly deploy and update live.
+These endpoints can be used to mock the Deposit Solution API.
+POST to the identity-check endpoint with a customer profile to start a check.
+The response is a new identity check resource with a status indicating the progress of the check.
+Poll the endpoint to track progress.
 
-**Glitch** is the friendly community where you'll build the app of your dreams. Glitch lets you instantly create, remix, edit, and host an app, bot or site, and you can invite collaborators or helpers to simultaneously edit code with you.
+Scenario
+--------
 
-Find out more [about Glitch](https://glitch.com/about).
-
-
-Your Project
-------------
-
-On the front-end,
-- edit `public/client.js`, `public/style.css` and `views/index.html`
-- drag in `assets`, like images or music, to add them to your project
+- start an identity check: POST /identity-check
+  - requires customerReference. This field is treated as the idempotent key.
+    If a new POST is made using a previous customerReference key, then the associated check is returned with a 200 response.
+  - a success returns 200 an the JSON response contains a check ID and a status
+  - The 'location' header provides the new resource endpoint which can be polled
+- poll the progress of identity check: GET /identity-check/{id}
+  - 
 
 On the back-end,
 - your app starts at `server.js`
