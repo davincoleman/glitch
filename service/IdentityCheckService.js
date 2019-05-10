@@ -19,7 +19,9 @@ exports.createIdentityCheck = function(body, headers) {
     const custId = body.customerReference;
     const testHeader = headers['x-test'];
     
-    if (testHeader && testHeader.toLowerCase('reset')) {
+    if (testHeader && testHeader.toLowerCase() == 'reset') {
+      custIdChecks = {};
+      custChecks = {};
       return resolve ({body: {status: 'reset'}, status: 205});
     }
     
@@ -55,6 +57,12 @@ exports.createIdentityCheck = function(body, headers) {
 }
 
 
+exports.getIdentityChecks = function(headers) {
+  return new Promise(function(resolve, reject) {
+    resolve({body: Object.values(custChecks), status: 200});
+  });
+}
+
 /**
  * Find Identity Check by Id
  * 
@@ -85,12 +93,15 @@ exports.getIdentityCheckById = function(identityCheckId, headers) {
       }
       if (testHeader.toLowerCase() == 'duplicated') {
         const dupCust = custChecks[Object.keys(custChecks)[0]];
-        check.duplicatedCustomerReference = dupCust.customerReference;
-        check.duplicatedIdentityId = dupCust.identity.id;
-        check.status = dupCust.status;
+        if (dupCust) {          
+          check.duplicate = {customerReference: dupCust.customerReference, 
+                             identityId: dupCust.identity ? dupCust.identity.id : undefined};
+          check.status = dupCust.status;
+        }
       }
     }
     
+    console.log(JSON.stringify(check));
     if (check) {
       resolve({body: check, status: 200});
     } else {

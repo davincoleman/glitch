@@ -101,6 +101,20 @@ paths:
         contentHandling: "CONVERT_TO_TEXT"
         type: "aws_proxy"
       x-swagger-router-controller: "IdentityCheck"
+    get:
+      tags:
+      - "identity-check"
+      summary: "Returns all checks"
+      description: ""
+      operationId: "getIdentityChecks"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Array of checks"
+          schema:
+            $ref: "#/definitions/IdentityCheckListResponse"
+      x-swagger-router-controller: "IdentityCheck"
   /identity-check/{identityCheckId}:
     get:
       tags:
@@ -264,6 +278,10 @@ definitions:
       postcode: "postcode"
       houseOrFlatNumber: "houseOrFlatNumber"
       addressLine2: "addressLine2"
+  IdentityCheckListResponse:
+    type: "array"
+    items:
+      $ref: "#/definitions/IdentityCheckResponse"
   IdentityCheckResponse:
     type: "object"
     required:
@@ -287,10 +305,8 @@ definitions:
         format: "date"
       customerReference:
         type: "string"
-      duplicatedCustomerReference:
-        type: "string"
-      duplicatedIdentityId:
-        type: "string"
+      duplicate:
+        $ref: "#/definitions/Duplicate"
       identity:
         $ref: "#/definitions/Identity"
       decline:
@@ -298,8 +314,6 @@ definitions:
       error:
         $ref: "#/definitions/Error"
     example:
-      duplicatedCustomerReference: "duplicatedCustomerReference"
-      duplicatedIdentityId: "duplicatedIdentityId"
       identity:
         id: "id"
       customerReference: "customerReference"
@@ -311,6 +325,18 @@ definitions:
         message: "message"
       createdOn: "2000-01-23"
       status: "Processing"
+  Duplicate:
+    type: "object"
+    required:
+      - "customerReference"
+    properties:
+      customerReference:
+        type: "string"
+      identityId:
+        type: "string"
+    example:
+      customerReference: "73f167bd-f66e-46e5-b799-b2f547904e8f"
+      identityId: "046b6c7f-0b8a-43b9-b35d-6489e6daee73"
   Identity:
     type: "object"
     required:

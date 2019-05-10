@@ -9,7 +9,7 @@ module.exports.createIdentityCheck = function createIdentityCheck (req, res, nex
   IdentityCheck.createIdentityCheck(body, headers)
     .then(function (response) {
       console.log(response);
-      if (response.status == 201) res.setHeader('Location', 'identity-check/' + response.body.id);
+      res.setHeader('Location', 'identity-check/' + response.body.id);
       utils.writeJson(res, response.body, response.status);
     })
     .catch(function (response) {
@@ -21,6 +21,18 @@ module.exports.getIdentityCheckById = function getIdentityCheckById (req, res, n
   var identityCheckId = req.swagger.params['identityCheckId'].value;
   var headers = req.headers;
   IdentityCheck.getIdentityCheckById(identityCheckId, headers)
+    .then(function (response) {
+      utils.writeJson(res, response.body, response.status);
+    })
+    .catch(function (response) {
+      utils.writeJson(res, response);
+    });
+};
+
+
+module.exports.getIdentityChecks = function getIdentityChecks (req, res, next) {
+  var headers = req.headers;
+  IdentityCheck.getIdentityChecks(headers)
     .then(function (response) {
       utils.writeJson(res, response.body, response.status);
     })
